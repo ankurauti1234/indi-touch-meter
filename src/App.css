@@ -1,0 +1,300 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Base colors from brand guidelines */
+  --background: oklch(1.00 0 0); /* White #FFFFFF */
+  --foreground: oklch(0.25 0.02 255); /* Dark text for readability */
+  
+  /* Card and surfaces - all white/light grey */
+  --card: oklch(1.00 0 0); /* White #FFFFFF */
+  --card-foreground: oklch(0.25 0.02 255);
+  --popover: oklch(1.00 0 0); /* White */
+  --popover-foreground: oklch(0.25 0.02 255);
+  
+  /* Primary - Inditronics Blue #091C64 */
+  --primary: oklch(0.25 0.12 264); /* Deep blue */
+  --primary-foreground: oklch(1.00 0 0); /* White text on blue */
+  
+  /* Secondary - Light Grey #E8EDF3 */
+  --secondary: oklch(0.94 0.01 250); /* Light grey */
+  --secondary-foreground: oklch(0.25 0.02 255); /* Dark text */
+  
+  /* Muted - Light Grey variations */
+  --muted: oklch(0.94 0.01 250); /* Light Grey #E8EDF3 */
+  --muted-foreground: oklch(0.55 0.02 255); /* Medium grey text */
+  
+  /* Accent - Inditronics Green #3AF16D */
+  --accent: oklch(0.85 0.18 145); /* Vibrant green */
+  --accent-foreground: oklch(0.15 0.02 255); /* Dark text on green */
+  
+  /* Destructive - soft red for errors */
+  --destructive: oklch(0.60 0.20 25);
+  --destructive-foreground: oklch(1.00 0 0);
+  
+  /* Borders and inputs - subtle Light Grey */
+  --border: oklch(0.90 0.01 250); /* Subtle border */
+  --input: oklch(0.94 0.01 250); /* Light Grey input bg */
+  --ring: oklch(0.85 0.18 145); /* Green focus ring */
+  
+  /* Chart colors - using brand colors sparingly */
+  --chart-1: oklch(0.25 0.12 264); /* Inditronics Blue */
+  --chart-2: oklch(0.85 0.18 145); /* Inditronics Green */
+  --chart-3: oklch(0.60 0.05 250); /* Medium grey */
+  --chart-4: oklch(0.75 0.03 250); /* Light grey */
+  --chart-5: oklch(0.35 0.08 264); /* Dark blue variant */
+  
+  /* Sidebar - maintaining white theme */
+  --sidebar: oklch(1.00 0 0); /* White */
+  --sidebar-foreground: oklch(0.25 0.02 255);
+  --sidebar-primary: oklch(0.25 0.12 264); /* Inditronics Blue */
+  --sidebar-primary-foreground: oklch(1.00 0 0);
+  --sidebar-accent: oklch(0.94 0.01 250); /* Light Grey */
+  --sidebar-accent-foreground: oklch(0.25 0.02 255);
+  --sidebar-border: oklch(0.90 0.01 250);
+  --sidebar-ring: oklch(0.85 0.18 145); /* Green */
+  
+  /* Typography - Geist as per original */
+--font-sans: "Google Sans Flex", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-serif: "Merriweather", "Georgia", Cambria, "Times New Roman", Times, ui-serif, serif;
+  --font-mono: "JetBrains Mono", "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  
+  /* Border radius */
+  --radius: 1rem; /* 12px as per guidelines */
+  
+  /* Shadows - subtle for clean look */
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 oklch(0 0 0 / 0.10), 0 1px 2px -1px oklch(0 0 0 / 0.10);
+  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.10), 0 2px 4px -2px oklch(0 0 0 / 0.10);
+  --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.10), 0 4px 6px -4px oklch(0 0 0 / 0.10);
+  --shadow-xl: 0 20px 25px -5px oklch(0 0 0 / 0.10), 0 8px 10px -6px oklch(0 0 0 / 0.10);
+  
+  /* Brand-specific colors as direct variables */
+  --inditronics-blue: oklch(0.25 0.12 264); /* #091C64 */
+  --inditronics-green: oklch(0.85 0.18 145); /* #3AF16D */
+  --white: oklch(1.00 0 0); /* #FFFFFF */
+  --light-grey: oklch(0.94 0.01 250); /* #E8EDF3 */
+  --medium-grey: oklch(0.60 0.02 250); /* For charts/secondary text */
+}
+
+/* Note: Brand guidelines specify white theme only, but dark theme added for flexibility */
+
+.dark {
+  /* Base – Off-black backgrounds */
+  --background: oklch(0.12 0 0);        /* Deep charcoal */
+  --foreground: oklch(0.95 0.02 260);   /* Soft white */
+
+  /* Surfaces */
+  --card: oklch(0.16 0 0);              /* Slightly raised charcoal */
+  --card-foreground: oklch(0.95 0.02 260);
+
+  --popover: oklch(0.18 0 0);
+  --popover-foreground: oklch(0.95 0.02 260);
+
+  /* Primary – Inditronics Blue */
+  --primary: oklch(0.58 0.18 260);      /* Clean vibrant blue */
+  --primary-foreground: oklch(1 0 0);
+
+  /* Secondary */
+  --secondary: oklch(0.20 0 0);         /* Dark grey */
+  --secondary-foreground: oklch(0.90 0.02 260);
+
+  /* Muted */
+  --muted: oklch(0.17 0 0);
+  --muted-foreground: oklch(0.70 0.02 260);
+
+  /* Accent */
+  --accent: oklch(0.78 0.18 140);       /* Green accent */
+  --accent-foreground: oklch(0.10 0 0);
+
+  /* Destructive */
+  --destructive: oklch(0.62 0.22 30);   /* Bright red */
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Border / input */
+  --border: oklch(0.22 0 0);            /* Subtle grey edge */
+  --input: oklch(0.20 0 0);
+  --ring: oklch(0.78 0.18 140);
+
+  /* Charts */
+  --chart-1: oklch(0.58 0.18 260);
+  --chart-2: oklch(0.78 0.18 140);
+  --chart-3: oklch(0.55 0.03 260);
+  --chart-4: oklch(0.70 0.02 240);
+  --chart-5: oklch(0.50 0.12 260);
+
+  /* Sidebar – slightly darker for contrast */
+  --sidebar: oklch(0.10 0 0);
+  --sidebar-foreground: oklch(0.90 0.02 260);
+  --sidebar-primary: oklch(0.58 0.18 260);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.18 0 0);
+  --sidebar-accent-foreground: oklch(0.95 0.02 260);
+  --sidebar-border: oklch(0.22 0 0);
+  --sidebar-ring: oklch(0.78 0.18 140);
+
+  /* Soft modern shadows */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.25);
+  --shadow: 0 2px 4px oklch(0 0 0 / 0.30);
+  --shadow-md: 0 4px 6px oklch(0 0 0 / 0.35);
+  --shadow-lg: 0 8px 12px oklch(0 0 0 / 0.40);
+  --shadow-xl: 0 16px 20px oklch(0 0 0 / 0.45);
+
+  /* Brand colors */
+  --inditronics-blue: oklch(0.58 0.18 260);
+  --inditronics-green: oklch(0.78 0.18 140);
+  --white: oklch(1 0 0);
+  --light-grey: oklch(0.22 0 0);
+  --medium-grey: oklch(0.40 0 0);
+}
+
+
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+/* From Uiverse.io by Gautammsharma */ 
+.circuit-wrapper {
+  min-height: 100%;
+  width: 100%;
+  position: relative;
+  background-color: white;
+}
+
+.circuit-background {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  /* pointer-events: none; */
+  background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 19px,
+      rgba(75, 85, 99, 0.08) 19px,
+      rgba(75, 85, 99, 0.08) 20px,
+      transparent 20px,
+      transparent 39px,
+      rgba(75, 85, 99, 0.08) 39px,
+      rgba(75, 85, 99, 0.08) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 19px,
+      rgba(75, 85, 99, 0.08) 19px,
+      rgba(75, 85, 99, 0.08) 20px,
+      transparent 20px,
+      transparent 39px,
+      rgba(75, 85, 99, 0.08) 39px,
+      rgba(75, 85, 99, 0.08) 40px
+    ),
+    radial-gradient(
+      circle at 20px 20px,
+      rgba(55, 65, 81, 0.12) 2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 40px 40px,
+      rgba(55, 65, 81, 0.12) 2px,
+      transparent 2px
+    );
+  background-size:
+    40px 40px,
+    40px 40px,
+    40px 40px,
+    40px 40px;
+}
+
+}
+
+@keyframes screensaver-slide-down {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0%);
+    opacity: 1;
+  }
+}
+
+@keyframes screensaver-slide-up {
+  0% {
+    transform: translateY(0%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+.screensaver-animate-in {
+  animation: screensaver-slide-down 2s ease forwards;
+}
+
+.screensaver-animate-out {
+  animation: screensaver-slide-up 0.6s ease forwards;
+}
