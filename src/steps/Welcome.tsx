@@ -2,18 +2,9 @@
 
 import { useStep } from "@/components/ui/MultiStepWizard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2 } from "lucide-react";
 
 export default function Welcome() {
   const { goNext } = useStep(); // next step trigger
-
-  const requirements = [
-    "Device is connected to power source",
-    "Device is connected to TV via HDMI/Line-In",
-    "WiFi credentials or SIM card available",
-    "Household ID from registration",
-  ];
 
   return (
     <div className="max-w-3xl mx-auto w-full h-full space-y-8  flex flex-col justify-center">
@@ -45,7 +36,7 @@ export default function Welcome() {
             <div className="space-y-3">
               {requirements.map((requirement, index) => (
                 <div key={index} className="flex items-start gap-3 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                   <span className="text-muted-foreground">{requirement}</span>
                 </div>
               ))}

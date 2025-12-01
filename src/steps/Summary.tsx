@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 export default function Summary() {
   const [deviceId, setDeviceId] = useState("Loading...");
   const [hhid, setHhid] = useState("Not set");
-  const [isVerified, setIsVerified] = useState(false);
+  const [, setIsVerified] = useState(false);
 
   const [networkType, setNetworkType] = useState<"wifi" | "gsm" | "none">("none");
   const [networkConnected, setNetworkConnected] = useState(false);

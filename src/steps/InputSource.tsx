@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 
 export default function InputSource() {
   const [hdmiActive, setHdmiActive] = useState(false);
@@ -25,13 +24,6 @@ export default function InputSource() {
     const interval = setInterval(checkInputs, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  // Determine active input label
-  const activeLabel = hdmiActive
-    ? "HDMI"
-    : lineInActive
-    ? "Line In"
-    : "None";
 
   return (
     <div className="max-w-3xl w-full mx-auto h-full flex flex-col  space-y-4 justify-between p-4 min-h-64">
