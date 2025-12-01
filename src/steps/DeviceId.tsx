@@ -13,7 +13,7 @@ export default function DeviceId() {
   }, []);
 
   return (
-    <div className="max-w-md mx-auto">
+    <div className="max-w-md mx-auto min-h-64 flex items-center justify-center p-4">
       <div className="space-y-6">
         <div className="text-center">
           <p className="text-2xl font-mono bg-muted p-4 rounded-lg">
@@ -27,3 +27,5 @@ export default function DeviceId() {
     </div>
   );
 }
+
+DeviceId.stepTitle = "Device ID";

@@ -1,5 +1,6 @@
-// src/components/MultiStepWizard.tsx
-import React, { createContext, useContext, useState } from "react";
+"use client";
+
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,9 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "./separator";
-import { StatusBar } from "./status-bar";
-
+import { Separator } from "@/components/ui/separator";
 import {
   Stepper,
   StepperIndicator,
@@ -19,9 +18,15 @@ import {
   StepperTrigger,
 } from "@/components/ui/stepper";
 
+import { motion, AnimatePresence } from "motion/react";
+import { Loader2 } from "lucide-react";
+
+/* ------------------------------------------------------------ */
+/* STEP CONTEXT */
+/* ------------------------------------------------------------ */
+
 const StepContext = createContext({
   currentStep: 0,
-  setCurrentStep: (_step: number) => {},
   goNext: () => {},
   goPrevious: () => {},
   isFirstStep: false,
@@ -29,67 +34,188 @@ const StepContext = createContext({
 });
 
 export function useStep() {
-  const context = useContext(StepContext);
-  if (!context) {
-    throw new Error("useStep must be used within a MultiStepWizard");
-  }
-  return context;
+  return useContext(StepContext);
 }
 
-interface MultiStepWizardProps {
-  children: React.ReactNode;
+/* ------------------------------------------------------------ */
+/* LOADING SCREEN COMPONENT */
+/* ------------------------------------------------------------ */
+
+function LoadingScreen({ onComplete }: { onComplete: () => void }) {
+  const [currentMessage, setCurrentMessage] = useState(0);
+  
+const messages = [
+  "Verifying device configuration...",
+  "Syncing time and firmware versions...",
+  "Calibrating sensors and input sources...",
+  "Validating network and server connection...",
+  "Initializing AI models and detection modules...",
+  "Checking audio fingerprinting engine...",
+  "Registering device with cloud services...",
+  "Applying final security checks...",
+  "Preparing dashboard and user interface...",
+  "Setup complete. Launching application...",
+];
+
+
+  useEffect(() => {
+    const messageInterval = setInterval(() => {
+      setCurrentMessage((prev) => (prev + 1) % messages.length);
+    }, 1000);
+
+    const completeTimeout = setTimeout(() => {
+      onComplete();
+    }, 10000);
+
+    return () => {
+      clearInterval(messageInterval);
+      clearTimeout(completeTimeout);
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-8">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+      >
+        <Loader2 className="w-16 h-16 text-primary" />
+      </motion.div>
+      
+      <div className="text-center">
+        <AnimatePresence mode="wait">
+          <motion.h2
+            key={currentMessage}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="text-2xl font-semibold"
+          >
+            {messages[currentMessage]}
+          </motion.h2>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
 }
 
-export function MultiStepWizard({ children }: MultiStepWizardProps) {
+/* ------------------------------------------------------------ */
+/* MULTI STEP WIZARD */
+/* ------------------------------------------------------------ */
+
+export function MultiStepWizard({
+  steps,
+}: {
+  steps: (React.ComponentType<any> & { stepTitle?: string })[];
+}) {
   const [currentStep, setCurrentStep] = useState(0);
-  const allChildren = React.Children.toArray(children);
+  const [direction, setDirection] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const isMembersStep = currentStep === allChildren.length - 1;
+  const totalSteps = steps.length;
 
-  // Stepper excludes the members step
-  const stepCount = allChildren.length - 1;
-  const visibleStepNumber = Math.min(currentStep + 1, stepCount);
+  const WELCOME_INDEX = 0;
+  const MEMBERS_INDEX = totalSteps - 1;
+
+  const FIRST_STEPPER_INDEX = 1;
+  const LAST_STEPPER_INDEX = totalSteps - 2;
+
+  const StepComponent = steps[currentStep];
+  const stepTitle = (StepComponent as any).stepTitle || "";
+
+  const isFirstStep = currentStep === WELCOME_INDEX;
+  const isLastStep = currentStep === MEMBERS_INDEX;
+
+  const stepCount = LAST_STEPPER_INDEX - FIRST_STEPPER_INDEX + 1;
+
+  const visibleStepNumber =
+    currentStep <= FIRST_STEPPER_INDEX
+      ? 1
+      : Math.min(currentStep - FIRST_STEPPER_INDEX + 1, stepCount);
 
   const goNext = () => {
-    setCurrentStep((prev) => Math.min(prev + 1, allChildren.length - 1));
+    // Check if we're on the second-to-last step (last stepper step)
+    if (currentStep === LAST_STEPPER_INDEX) {
+      setIsLoading(true);
+      // Loading screen will call handleLoadingComplete after 5 seconds
+    } else {
+      setDirection(1);
+      setCurrentStep((prev) => Math.min(prev + 1, totalSteps - 1));
+    }
   };
 
   const goPrevious = () => {
+    setDirection(-1);
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const isFirstStep = currentStep === 0;
+  const handleLoadingComplete = () => {
+    setIsLoading(false);
+    setDirection(1);
+    setCurrentStep(MEMBERS_INDEX);
+  };
+
+  /* ------------------------------------------------------------ */
+  /* SLIDE ANIMATION VARIANTS */
+  /* ------------------------------------------------------------ */
+
+  const slideVariants = {
+    initial: (dir: number) => ({
+      x: dir > 0 ? 60 : -60,
+      opacity: 0,
+      position: "absolute",
+      width: "100%",
+    }),
+    animate: {
+      x: 0,
+      opacity: 1,
+      position: "relative",
+      transition: { duration: 0.3 },
+    },
+    exit: (dir: number) => ({
+      x: dir > 0 ? -60 : 60,
+      opacity: 0,
+      position: "absolute",
+      width: "100%",
+      transition: { duration: 0.2 },
+    }),
+  };
+
+  const shouldAnimate =
+    !isFirstStep && !isLastStep; // only middle steps animate
 
   return (
     <StepContext.Provider
       value={{
         currentStep,
-        setCurrentStep,
         goNext,
         goPrevious,
         isFirstStep,
-        isLastStep: isMembersStep,
+        isLastStep,
       }}
     >
-      <div className="flex flex-col min-h-screen">
-
-        {/* MAIN CONTENT */}
+      <div className="flex flex-col h-full">
         <div className="flex-1 flex flex-col">
 
-          {isMembersStep ? (
-            /* FULL SCREEN MEMBERS GRID */
-            <div className="flex-1 w-full p-4 overflow-auto">
-              {allChildren[currentStep]}
+          {/* ------------------------------------------------------------ */}
+          {/* 1) FIRST STEP - NO CARD, NO ANIMATION */}
+          {/* ------------------------------------------------------------ */}
+          {isFirstStep && (
+            <div className="p-4 flex-1 overflow-auto">
+              <StepComponent />
             </div>
-          ) : (
-            /* NORMAL STEPS WITH CARD */
-            <div className="flex-1 flex items-center justify-center">
-              <div className="w-full max-w-4xl z-10">
-                <Card className="w-full gap-0 p-0">
-                  
-                  {/* HEADER + STEPPER */}
-                  <CardHeader className="p-4 flex items-center justify-between">
-                    <CardTitle className="text-xl">Setup Wizard</CardTitle>
+          )}
+
+          {/* ------------------------------------------------------------ */}
+          {/* 2) MIDDLE STEPS - CARD + TITLE + STEPPER + ANIMATION */}
+          {/* ------------------------------------------------------------ */}
+          {!isFirstStep && !isLastStep && !isLoading && (
+            <div className="flex-1 flex justify-center items-center">
+              <div className="w-full max-w-4xl">
+                <Card className="w-full p-0 gap-0">
+                  <CardHeader className="flex justify-between p-4">
+                    <CardTitle className="text-2xl font-light p-0 ">{stepTitle}</CardTitle>
 
                     <Stepper
                       value={visibleStepNumber}
@@ -97,6 +223,7 @@ export function MultiStepWizard({ children }: MultiStepWizardProps) {
                     >
                       {Array.from({ length: stepCount }, (_, index) => {
                         const step = index + 1;
+
                         return (
                           <StepperItem key={step} step={step} className="not-last:flex-1">
                             <StepperTrigger>
@@ -111,37 +238,68 @@ export function MultiStepWizard({ children }: MultiStepWizardProps) {
 
                   <Separator />
 
-                  {/* CONTENT */}
-                  <CardContent className="p-4 min-h-64 flex items-center justify-center">
-                    {allChildren[currentStep]}
+                  <CardContent className="relative p-0 overflow-hidden">
+                    <AnimatePresence mode="popLayout" custom={direction}>
+                      {shouldAnimate ? (
+                        <motion.div
+                          key={currentStep}
+                          custom={direction}
+                          variants={slideVariants}
+                          initial="initial"
+                          animate="animate"
+                          exit="exit"
+                        >
+                          <StepComponent />
+                        </motion.div>
+                      ) : (
+                        <div>
+                          <StepComponent />
+                        </div>
+                      )}
+                    </AnimatePresence>
                   </CardContent>
 
                   <Separator />
 
-                  {/* FOOTER BUTTONS */}
-                  <CardFooter className="flex justify-between items-center p-4">
-                    <Button
-                      variant="outline"
+                  <CardFooter className="flex justify-between p-4">
+                    <Button 
+                      variant="outline" 
                       onClick={goPrevious}
-                      disabled={isFirstStep}
+                      disabled={isLoading}
                     >
                       Previous
                     </Button>
 
-                    {visibleStepNumber === stepCount ? (
-                      <Button onClick={goNext}>Finish</Button>
-                    ) : (
-                      <Button onClick={goNext}>Next</Button>
-                    )}
+                    <Button 
+                      onClick={goNext}
+                      disabled={isLoading}
+                    >
+                      {currentStep === LAST_STEPPER_INDEX ? "Finish" : "Next"}
+                    </Button>
                   </CardFooter>
                 </Card>
               </div>
             </div>
           )}
-        </div>
 
-        {/* STATUS BAR ALWAYS AT BOTTOM */}
-        <StatusBar />
+          {/* ------------------------------------------------------------ */}
+          {/* LOADING SCREEN - FULLSCREEN, NO CARD */}
+          {/* ------------------------------------------------------------ */}
+          {isLoading && (
+            <div className="flex-1">
+              <LoadingScreen onComplete={handleLoadingComplete} />
+            </div>
+          )}
+
+          {/* ------------------------------------------------------------ */}
+          {/* 3) LAST STEP - NO CARD, NO ANIMATION */}
+          {/* ------------------------------------------------------------ */}
+          {isLastStep && (
+            <div className="p-4 flex-1 overflow-auto">
+              <StepComponent />
+            </div>
+          )}
+        </div>
       </div>
     </StepContext.Provider>
   );

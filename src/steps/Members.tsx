@@ -1,4 +1,13 @@
-import { useState } from "react";
+// src/steps/Members.tsx
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+
+interface Member {
+  id: string;
+  age: number;
+  gender: string;
+  active: boolean;
+}
 
 const MemberCard = ({
   id,
@@ -44,37 +53,61 @@ const MemberCard = ({
 };
 
 export default function Members() {
-  const members = [
-    { id: "M001", age: 10, gender: "Female" },
-    { id: "M002", age: 35, gender: "Male" },
-    { id: "M003", age: 65, gender: "Female" },
-    { id: "M004", age: 10, gender: "Male" },
-    { id: "M005", age: 29, gender: "Female" },
-    { id: "M006", age: 19, gender: "Male" },
-    { id: "M007", age: 15, gender: "Female" },
-    { id: "M008", age: 80, gender: "Male" },
-  ];
+  const [members, setMembers] = useState<Member[]>([]);
+  const [status, setStatus] = useState("");
 
-  // Track active states
-  const [activeMap, setActiveMap] = useState<{ [key: string]: boolean }>({});
-
-  const toggleActive = (id: string) => {
-    setActiveMap((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+  const loadMembers = async () => {
+    try {
+      const data: string = await invoke("get_members");
+      setMembers(JSON.parse(data));
+      setStatus("");
+    } catch (error: any) {
+      setStatus(`Failed to load members: ${error}`);
+    }
   };
 
+  const toggleMember = async (id: string) => {
+    try {
+      setStatus("Sending...");
+      await invoke("toggle_member", { memberId: id });
+      await loadMembers();
+      setStatus("Successfully sent!");
+      setTimeout(() => setStatus(""), 2000);
+    } catch (error: any) {
+      setStatus(`Failed: ${error}`);
+    }
+  };
+
+  useEffect(() => {
+    loadMembers();
+  }, []);
+
   return (
-    <div className="w-full h-[90vh] grid grid-cols-4 grid-rows-[1fr_1fr] gap-4">
-      {members.map((m, i) => (
-        <MemberCard
-          key={i}
-          {...m}
-          active={!!activeMap[m.id]}
-          onToggle={() => toggleActive(m.id)}
-        />
-      ))}
+    <div className="w-full h-full pb-12">
+      <div className="w-full h-full grid grid-cols-4 grid-rows-[1fr_1fr] gap-4 ">
+        {members.map((member) => (
+          <MemberCard
+            key={member.id}
+            id={member.id}
+            age={member.age}
+            gender={member.gender}
+            active={member.active}
+            onToggle={() => toggleMember(member.id)}
+          />
+        ))}
+      </div>
+
+      {status && (
+        <div
+          className={`absolute top-2 left-2 size-2 rounded-full text-white font-medium shadow-2xl transition-all ${
+            status.includes("Success") || status.includes("sent")
+              ? "bg-green-600"
+              : "bg-red-50 text-red-700"
+          }`}
+        >
+          {/* {status} */}
+        </div>
+      )}
     </div>
   );
 }

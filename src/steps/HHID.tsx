@@ -1,157 +1,138 @@
-// src/steps/HHID.tsx
-import { useState } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-  InputGroupText,
-} from "@/components/ui/input-group";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Info, Send } from "lucide-react";
-
-
-interface MqttMessage {
-  topic: string;
-  payload: string;
-  qos: number;
-}
+import { Label } from "@/components/ui/label";
+import { Keyboard } from "@/components/keyboard";
 
 export default function HHID() {
   const [hhid, setHhid] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
-  const [isSending, setIsSending] = useState(false);
+  const [meterId, setMeterId] = useState("");
   const [status, setStatus] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  const connectMqtt = async () => {
-    try {
-      setStatus("Connecting...");
-      
-      const config = {
-        endpoint: "a3uoz4wfsx2nz3-ats.iot.ap-south-1.amazonaws.com",
-        port: 8883,
-        client_id: `indi-touch-meter-${Date.now()}`,
-        cert_path: "C:\\Users\\ankur\\Dev\\personal\\frontend\\indi-touch-meter\\certs\\INDIREX-ADMIN.crt",
-        key_path: "C:\\Users\\ankur\\Dev\\personal\\frontend\\indi-touch-meter\\certs\\INDIREX-ADMIN.key",
-        ca_path: "C:\\Users\\ankur\\Dev\\personal\\frontend\\indi-touch-meter\\certs\\AmazonRootCA1.pem",
-        // certPath: "../certs/INDIREX-ADMIN.crt",
-        // keyPath: "../certs/INDIREX-ADMIN.key",
-        // caPath: "../certs/AmazonRootCA1.pem"
-      };
+  useEffect(() => {
+    invoke<string>("read_device_id")
+      .then(setMeterId)
+      .catch(() => setStatus("Failed to load device ID"));
+  }, []);
 
-      await invoke("mqtt_connect", { config });
-      setIsConnected(true);
-      setStatus("Connected to AWS IoT Core");
-    } catch (error) {
-      setStatus(`Connection failed: ${error}`);
-      console.error("MQTT Connection Error:", error);
-    }
+  const handleVirtualKey = (key: string) => {
+    if (key === "Backspace") return setHhid((prev) => prev.slice(0, -1));
+    if (/^\d$/.test(key) && hhid.length < 4) return setHhid(hhid + key);
+    if (key === "Enter" && hhid.length === 4) return handleSend();
   };
 
-  const sendHHID = async () => {
-    if (!hhid || hhid.length !== 4) {
-      setStatus("Please enter a valid 4-digit HHID");
-      return;
-    }
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && hhid.length === 4) handleSend();
+  };
 
-    if (!isConnected) {
-      await connectMqtt();
-    }
-
+  const handleSend = async () => {
+    if (hhid.length !== 4 || !meterId) return;
     try {
       setIsSending(true);
       setStatus("Sending...");
-
-      const message: MqttMessage = {
-        topic: "apm/test/rust",
-        payload: JSON.stringify({ HHID: hhid }),
-        qos: 1
-      };
-
-      await invoke("mqtt_publish", { message });
-      setStatus(`Successfully sent HHID: ${hhid}`);
-    } catch (error) {
-      setStatus(`Send failed: ${error}`);
-      console.error("MQTT Publish Error:", error);
+      const response = await invoke<string>("initiate_assignment", {
+        meterId,
+        hhid,
+      });
+      setStatus(response);
+    } catch (err: any) {
+      setStatus(`Failed: ${err}`);
     } finally {
       setIsSending(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && hhid.length === 4) {
-      sendHHID();
-    }
-  };
+  const statusGood =
+    status.toLowerCase().includes("success") ||
+    status.toLowerCase().includes("sent") ||
+    status.toLowerCase().includes("assigned");
 
   return (
-    <div className="max-w-sm mx-auto">
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="hhid">Enter 4-digit Household ID</Label>
+    <div className="max-w-3xl w-full mx-auto flex flex-col p-4 space-y-4 min-h-64">
 
-          <InputGroup>
-            <InputGroupInput
-              className="pl-2! text-2xl"
-              id="hhid"
+      {/* Input Card */}
+      <div
+        className={`p-4 rounded-lg border transition-all ${
+          hhid.length === 4
+            ? "bg-accent/15 border-accent"
+            : "bg-card border-muted"
+        }`}
+      >
+        <div className="space-y-3">
+          <Label className="text-sm">Enter your Household ID</Label>
+
+          {/* Input with HH prefix */}
+          <div className="flex items-center ">
+            <div className="px-3 h-14 flex items-center justify-center rounded-md bg-border text-muted-foreground font-semibold text-2xl">
+              HH
+            </div>
+
+            <input
+              inputMode="numeric"
               maxLength={4}
+              className="
+                flex-1 text-start text-2xl font-mono
+                bg-muted rounded-md px-4 py-3
+                focus:outline-none
+              "
+              placeholder="0000"
               value={hhid}
-              onChange={(e) => setHhid(e.target.value.replace(/\D/g, ""))}
-              onKeyPress={handleKeyPress}
-              placeholder="1001"
               disabled={isSending}
+              onFocus={() => setIsKeyboardOpen(true)}
+              onChange={(e) =>
+                setHhid(e.target.value.replace(/\D/g, "").slice(0, 4))
+              }
+              onKeyDown={handleKeyPress}
             />
-            <InputGroupAddon>
-              <InputGroupText className="font-semibold">HH</InputGroupText>
-            </InputGroupAddon>
-            <InputGroupAddon align="inline-end">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <InputGroupButton className="rounded-full" size="icon-xs">
-                    <Info />
-                  </InputGroupButton>
-                </TooltipTrigger>
-                <TooltipContent>4 digit HHID assigned to your household.</TooltipContent>
-              </Tooltip>
-            </InputGroupAddon>
-          </InputGroup>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Enter the 4-digit household identifier assigned to you.
+          </p>
         </div>
-
-        <Button 
-          onClick={sendHHID} 
-          disabled={hhid.length !== 4 || isSending}
-          className="w-full"
-        >
-          <Send className="mr-2 h-4 w-4" />
-          {isSending ? "Sending..." : "Send HHID"}
-        </Button>
-
-        {status && (
-          <div className={`text-sm p-3 rounded-md ${
-            status.includes("Success") || status.includes("Connected") 
-              ? "bg-green-50 text-green-700 border border-green-200" 
-              : status.includes("failed") || status.includes("Error")
-              ? "bg-red-50 text-red-700 border border-red-200"
-              : "bg-blue-50 text-blue-700 border border-blue-200"
-          }`}>
-            {status}
-          </div>
-        )}
-
-        {isConnected && (
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span>Connected to MQTT</span>
-          </div>
-        )}
       </div>
+
+      {/* Button */}
+      <Button
+        className="w-full py-3"
+        disabled={hhid.length !== 4 || isSending}
+        onClick={handleSend}
+      >
+        {isSending ? "Sending..." : "Submit Household ID"}
+      </Button>
+
+      {/* Status */}
+      {status && (
+        <div
+          className={`p-3 rounded-lg text-sm border ${
+            statusGood
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-red-50 text-red-700 border-red-200"
+          }`}
+        >
+          {status}
+        </div>
+      )}
+
+      {/* Virtual Keyboard */}
+      <Keyboard
+        isOpen={isKeyboardOpen}
+        onClose={() => setIsKeyboardOpen(false)}
+        onKeyPress={handleVirtualKey}
+        targetInput="hhid"
+        inputValue={hhid}
+        inputPlaceholder="0000"
+        inputLabel="Enter your Household ID"
+        inputMaxLength={4}
+        inputType="numeric"
+        inputPrefix="HH"
+      />
     </div>
   );
 }
+
+HHID.stepTitle = "Household ID";

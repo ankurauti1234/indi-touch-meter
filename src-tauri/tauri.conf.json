@@ -13,9 +13,9 @@
     "windows": [
       {
         "title": "indi-touch-meter",
-        "width": 800,
+        "width": 1024,
         "height": 600,
-        "fullscreen": true
+        "fullscreen": false
       }
     ],
     "security": {

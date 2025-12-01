@@ -1,36 +1,109 @@
 // src/steps/InputSource.tsx
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 export default function InputSource() {
+  const [hdmiActive, setHdmiActive] = useState(false);
+  const [lineInActive, setLineInActive] = useState(false);
+
+  const checkInputs = async () => {
+    try {
+      const hdmi = await invoke<boolean>("file_exists", { fileName: "input_hdmi" });
+      const lineIn = await invoke<boolean>("file_exists", { fileName: "input_linein" });
+
+      setHdmiActive(hdmi);
+      setLineInActive(lineIn);
+    } catch (error) {
+      console.error("Failed to check input files:", error);
+    }
+  };
+
+  useEffect(() => {
+    checkInputs();
+    const interval = setInterval(checkInputs, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Determine active input label
+  const activeLabel = hdmiActive
+    ? "HDMI"
+    : lineInActive
+    ? "Line In"
+    : "None";
+
   return (
-    <div className="space-y-6">
-        <div className="space-y-4">
-          <div className="flex justify-between items-center p-6 border rounded-lg">
-            <div>
-              <p className="font-medium">HDMI Input</p>
-              <p className="text-sm text-muted-foreground">Primary video and audio input from TV</p>
-            </div>
-            <Badge variant="default">Active</Badge>
-          </div>
-          <div className="flex justify-between items-center p-6 border rounded-lg bg-muted/50">
-            <div>
-              <p className="font-medium">Line In Input</p>
-              <p className="text-sm text-muted-foreground">External audio input through 3.5mm jack</p>
-            </div>
-            <Badge variant="secondary">Inactive</Badge>
-          </div>
+    <div className="max-w-3xl w-full mx-auto h-full flex flex-col  space-y-4 justify-between p-4 min-h-64">
+      {/* Input List */}
+      <div className="space-y-4 h-full flex-1">
+        <InputItem
+          title="HDMI Input"
+          description="Primary audio/video input"
+          active={hdmiActive}
+        />
+
+        <InputItem
+          title="Line In Input"
+          description="3.5mm external audio input"
+          active={lineInActive}
+        />
+      </div>
+
+  <p className="text-xs text-muted-foreground text-center">
+          The system automatically selects the currently active input source.
+        </p>
+      {/* Active Source Summary */}
+      {/* <div className="p-6 rounded-lg border bg-card text-center space-y-3">
+      
+
+        <div className="inline-flex items-center gap-2 px-6 py-3 border rounded-full bg-muted">
+          <span className="w-2.5 h-2.5 rounded-full bg-green-500 block" />
+          <span className="font-medium">
+            {activeLabel === "None"
+              ? "No active input detected"
+              : `${activeLabel} is currently active`}
+          </span>
         </div>
-        <div className="p-6 border rounded-lg">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-4">
-              Current input source is automatically detected and set to the active input.
-            </p>
-            <div className="inline-flex items-center gap-2 px-8 py-4 bg-green-500/10 border border-green-500/20 rounded-full">
-              <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-              <span className="font-medium text-green-700">HDMI Input is currently active</span>
-            </div>
-          </div>
-        </div>
+      </div> */}
     </div>
   );
 }
+
+/* ------------------------------------------------------- */
+/* Reusable Item Component                                 */
+/* ------------------------------------------------------- */
+
+function InputItem({
+  title,
+  description,
+  active,
+}: {
+  title: string;
+  description: string;
+  active: boolean;
+}) {
+  return (
+    <div
+      className={`flex justify-between items-center p-4 rounded-lg border transition-all w-full ${
+        active
+          ? "bg-accent/15 border-accent"
+          : "bg-card border-muted"
+      }`}
+    >
+      <div>
+        <p className="font-medium">{title}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+
+      <Badge
+        variant={active ? "default" : "secondary"}
+        className="px-3 py-1 text-xs"
+      >
+        {active ? "Active" : "Inactive"}
+      </Badge>
+    </div>
+  );
+}
+
+InputSource.stepTitle = "Input Source";

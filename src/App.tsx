@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import "./App.css";
 
@@ -15,8 +14,10 @@ import Members from "./steps/Members";
 import AudioFingerprint from "./steps/AudioFingerprint";
 
 import { MultiStepWizard } from "./components/ui/MultiStepWizard";
-import { ThemeProvider } from "./components/ui/theme-provider";
+import { ThemeProvider, useTheme } from "./components/ui/theme-provider";
 import { ScreenSaver } from "./components/screen-saver";
+import { Toaster } from "sonner";
+import { StatusBar } from "./components/ui/status-bar";
 
 function App() {
   const [idle, setIdle] = useState(false);
@@ -33,11 +34,7 @@ function App() {
   useEffect(() => {
     resetTimer();
 
-    const events = [
-      "mousedown",
-      "touchstart",
-      "keypress",
-    ];
+    const events = ["mousedown", "touchstart", "keypress"];
 
     events.forEach((evt) => window.addEventListener(evt, resetTimer));
 
@@ -48,26 +45,42 @@ function App() {
       }
     };
   }, []);
+  const { theme } = useTheme();
 
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <div className="circuit-background relative">
-        <MultiStepWizard>
-          <Welcome />
-          <Network />
-          <DeviceId />
-          <HHID />
-          <OTP />
-          <TVStatus />
-          <InputSource />
-          <ObjectDetection />
-          <AudioFingerprint />
-          <Summary />
-          <Members />
-        </MultiStepWizard>
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <div className="circuit-background relative h-screen">
+<MultiStepWizard
+  steps={[
+    Welcome,
+    Network,
+    DeviceId,
+    HHID,
+    OTP,
+    TVStatus,
+    InputSource,
+    ObjectDetection,
+    AudioFingerprint,
+    Summary,
+    Members,
+  ]}
+/>
+
+
+        {/* ------------------------------------------------------------------ */}
+        {/* STATUS BAR ALWAYS AT THE BOTTOM */}
+        {/* ------------------------------------------------------------------ */}
+        <StatusBar />
 
         {/* Screen Saver */}
         <ScreenSaver idle={idle} setIdle={setIdle} />
+
+        <Toaster
+          richColors
+          closeButton
+          theme={theme === "system" ? "system" : theme}
+          position="top-right"
+        />
       </div>
     </ThemeProvider>
   );
