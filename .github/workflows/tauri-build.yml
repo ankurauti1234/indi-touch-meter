@@ -7,37 +7,52 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted   # EC2 runner
+    runs-on: self-hosted   # EC2 ARM64 GitHub Runner
+
     steps:
+      # 1. Fix permissions (prevents EACCES errors)
+      - name: Fix workspace permissions
+        run: sudo chown -R ubuntu:ubuntu /home/ubuntu/actions-runner/_work
+
+      # 2. Checkout repo
       - name: Checkout
         uses: actions/checkout@v3
 
+      # 3. Clean previous builds
       - name: Clean old build files
-        run: |
-          rm -rf src-tauri/target/release/bundle || true
+        run: rm -rf src-tauri/target/release/bundle || true
 
+      # 4. Build Docker image & Tauri project
       - name: Build using Docker
         run: |
+          # Build Docker image with Tauri toolchain
           cd ~/tauri-docker-build
           docker build -t tauri-builder:bookworm .
+
+          # Go back to project folder
           cd $GITHUB_WORKSPACE
+
+          # Run Tauri build INSIDE docker, but as ubuntu user
           docker run --rm \
-            -v $(pwd):/app \
+            -u "$(id -u):$(id -g)" \
+            -v "$(pwd)":/app \
             -w /app \
             tauri-builder:bookworm \
             bash -c "npm install && npm run tauri build"
 
+      # 5. Upload final .deb file to S3
       - name: Upload to S3
         run: |
           FILE=$(ls src-tauri/target/release/bundle/deb/*.deb)
           aws s3 cp "$FILE" s3://apm-update/builds/
+          echo "BUILD_FILE=$(basename $FILE)" >> $GITHUB_ENV
 
+      # 6. Email notification using SES
       - name: Send SES Email
         run: |
-          FILE=$(ls src-tauri/target/release/bundle/deb/*.deb | xargs -n1 basename)
-          LINK="https://apm-update.s3.amazonaws.com/builds/$FILE"
+          LINK="https://apm-update.s3.amazonaws.com/builds/$BUILD_FILE"
 
           aws ses send-email \
             --from "ankur.auti@inditronics.com" \
             --destination "ToAddresses=ankurauti@gmail.com" \
-            --message "Subject={Data=Tauri Build Completed},Body={Text={Data=New build available: $LINK}}"
+            --message "Subject={Data=Tauri Build Completed},Body={Text={Data=New ARM64 build is ready: $LINK}}"
