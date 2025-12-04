@@ -7,36 +7,34 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted   # EC2 ARM64 GitHub Runner
+    runs-on: self-hosted
 
     steps:
-      # 1. Fix workspace permissions (prevents repo cleanup issues)
       - name: Fix workspace permissions
         run: sudo chown -R ubuntu:ubuntu /home/ubuntu/actions-runner/_work
 
-      # 2. Checkout repo
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 3. Clean previous builds
+      # IMPORTANT: Fix actual project directory inside runner
+      - name: Fix ALL project permissions (Cargo fix)
+        run: sudo chown -R ubuntu:ubuntu /home/ubuntu/actions-runner/_work/indi-touch-meter/indi-touch-meter
+
+      # Fix cargo registry (sometimes root-owned)
+      - name: Fix Cargo registry permissions
+        run: sudo chown -R ubuntu:ubuntu /usr/local/cargo || true
+
       - name: Clean old build files
         run: rm -rf src-tauri/target/release/bundle || true
 
-      # 3.1 Fix project permissions (IMPORTANT for Cargo)
-      - name: Fix project permissions
-        run: sudo chown -R ubuntu:ubuntu $GITHUB_WORKSPACE
-
-      # 4. Build Docker image using CACHE
       - name: Build Docker image (cached)
         run: |
           cd ~/tauri-docker-build
-
           docker build \
             --cache-from=type=local,src=/home/ubuntu/docker-cache \
             --cache-to=type=local,dest=/home/ubuntu/docker-cache,mode=max \
             -t tauri-builder:bookworm .
 
-      # 5. Build Tauri inside Docker (non-root, correct HOME and npmrc)
       - name: Build Tauri App
         run: |
           cd $GITHUB_WORKSPACE
@@ -55,14 +53,12 @@ jobs:
               npm run tauri build
             "
 
-      # 6. Upload final .deb file to S3
       - name: Upload to S3
         run: |
           FILE=$(ls src-tauri/target/release/bundle/deb/*.deb)
           aws s3 cp \"$FILE\" s3://apm-update/builds/
           echo \"BUILD_FILE=$(basename $FILE)\" >> $GITHUB_ENV
 
-      # 7. Send email via SES
       - name: Send SES Email
         run: |
           LINK=\"https://apm-update.s3.amazonaws.com/builds/$BUILD_FILE\"
