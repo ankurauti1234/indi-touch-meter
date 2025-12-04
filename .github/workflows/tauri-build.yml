@@ -10,7 +10,7 @@ jobs:
     runs-on: self-hosted   # EC2 ARM64 GitHub Runner
 
     steps:
-      # 1. Fix permissions (prevents EACCES errors)
+      # 1. Fix workspace permissions (prevents EACCES issues)
       - name: Fix workspace permissions
         run: sudo chown -R ubuntu:ubuntu /home/ubuntu/actions-runner/_work
 
@@ -22,7 +22,7 @@ jobs:
       - name: Clean old build files
         run: rm -rf src-tauri/target/release/bundle || true
 
-      # 4. Build Docker image using CACHE
+      # 4. Build Docker image USING CACHING
       - name: Build Docker image (cached)
         run: |
           cd ~/tauri-docker-build
@@ -32,7 +32,7 @@ jobs:
             --cache-to=type=local,dest=/home/ubuntu/docker-cache,mode=max \
             -t tauri-builder:bookworm .
 
-      # 5. Build Tauri inside Docker (non-root, correct HOME)
+      # 5. Build Tauri app inside Docker (non-root, correct HOME)
       - name: Build Tauri App
         run: |
           cd $GITHUB_WORKSPACE
@@ -40,17 +40,18 @@ jobs:
           docker run --rm \
             -u "$(id -u):$(id -g)" \
             -e HOME=/app \
+            -e NPM_CONFIG_USERCONFIG=/app/.npmrc \
             -v "$(pwd)":/app \
             -w /app \
             tauri-builder:bookworm \
             bash -c "
               mkdir -p /app/.npm &&
-              npm config set cache /app/.npm --global &&
+              echo 'cache=/app/.npm' > /app/.npmrc &&
               npm install &&
               npm run tauri build
             "
 
-      # 6. Upload .deb file to S3
+      # 6. Upload final .deb file to S3
       - name: Upload to S3
         run: |
           FILE=$(ls src-tauri/target/release/bundle/deb/*.deb)
@@ -65,4 +66,4 @@ jobs:
           aws ses send-email \
             --from \"ankur.auti@inditronics.com\" \
             --destination \"ToAddresses=ankurauti@gmail.com\" \
-            --message \"Subject={Data=Tauri Build Completed},Body={Text={Data=New ARM64 build is ready:\n$LINK}}\"        
+            --message \"Subject={Data=Tauri Build Completed},Body={Text={Data=New ARM64 build is ready:\n$LINK}}"
