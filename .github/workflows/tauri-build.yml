@@ -10,7 +10,7 @@ jobs:
     runs-on: self-hosted   # EC2 ARM64 GitHub Runner
 
     steps:
-      # 1. Fix workspace permissions (prevents EACCES issues)
+      # 1. Fix workspace permissions (prevents repo cleanup issues)
       - name: Fix workspace permissions
         run: sudo chown -R ubuntu:ubuntu /home/ubuntu/actions-runner/_work
 
@@ -22,7 +22,11 @@ jobs:
       - name: Clean old build files
         run: rm -rf src-tauri/target/release/bundle || true
 
-      # 4. Build Docker image USING CACHING
+      # 3.1 Fix project permissions (IMPORTANT for Cargo)
+      - name: Fix project permissions
+        run: sudo chown -R ubuntu:ubuntu $GITHUB_WORKSPACE
+
+      # 4. Build Docker image using CACHE
       - name: Build Docker image (cached)
         run: |
           cd ~/tauri-docker-build
@@ -32,7 +36,7 @@ jobs:
             --cache-to=type=local,dest=/home/ubuntu/docker-cache,mode=max \
             -t tauri-builder:bookworm .
 
-      # 5. Build Tauri app inside Docker (non-root, correct HOME)
+      # 5. Build Tauri inside Docker (non-root, correct HOME and npmrc)
       - name: Build Tauri App
         run: |
           cd $GITHUB_WORKSPACE
@@ -58,7 +62,7 @@ jobs:
           aws s3 cp \"$FILE\" s3://apm-update/builds/
           echo \"BUILD_FILE=$(basename $FILE)\" >> $GITHUB_ENV
 
-      # 7. Send SES Email notification
+      # 7. Send email via SES
       - name: Send SES Email
         run: |
           LINK=\"https://apm-update.s3.amazonaws.com/builds/$BUILD_FILE\"
