@@ -1,0 +1,43 @@
+name: Build Tauri ARM64 and Upload
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: self-hosted   # EC2 runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Clean old build files
+        run: |
+          rm -rf src-tauri/target/release/bundle || true
+
+      - name: Build using Docker
+        run: |
+          cd ~/tauri-docker-build
+          docker build -t tauri-builder:bookworm .
+          cd $GITHUB_WORKSPACE
+          docker run --rm \
+            -v $(pwd):/app \
+            -w /app \
+            tauri-builder:bookworm \
+            bash -c "npm install && npm run tauri build"
+
+      - name: Upload to S3
+        run: |
+          FILE=$(ls src-tauri/target/release/bundle/deb/*.deb)
+          aws s3 cp "$FILE" s3://apm-update/builds/
+
+      - name: Send SES Email
+        run: |
+          FILE=$(ls src-tauri/target/release/bundle/deb/*.deb | xargs -n1 basename)
+          LINK="https://apm-update.s3.amazonaws.com/builds/$FILE"
+
+          aws ses send-email \
+            --from "ankur.auti@inditronics.com" \
+            --destination "ToAddresses=ankurauti@gmail.com" \
+            --message "Subject={Data=Tauri Build Completed},Body={Text={Data=New build available: $LINK}}"

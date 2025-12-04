@@ -1,7 +1,7 @@
 [package]
 name = "indi-touch-meter"
 version = "0.1.0"
-description = "A Tauri App"
+description = "A self-installation utility built for Inditronics Touch People Meters, designed to streamline device setup and configuration for audience measurement systems."
 authors = ["you"]
 edition = "2021"
 
