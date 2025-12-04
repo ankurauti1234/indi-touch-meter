@@ -7,34 +7,32 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: self-hosted   # EC2 ARM64 GitHub Runner
 
     steps:
+      # 1. Fix workspace (runner) directory permissions
       - name: Fix workspace permissions
         run: sudo chown -R ubuntu:ubuntu /home/ubuntu/actions-runner/_work
 
+      # 2. Checkout repo
       - name: Checkout
         uses: actions/checkout@v3
 
-      # IMPORTANT: Fix actual project directory inside runner
-      - name: Fix ALL project permissions (Cargo fix)
-        run: sudo chown -R ubuntu:ubuntu /home/ubuntu/actions-runner/_work/indi-touch-meter/indi-touch-meter
-
-      # Fix cargo registry (sometimes root-owned)
-      - name: Fix Cargo registry permissions
-        run: sudo chown -R ubuntu:ubuntu /usr/local/cargo || true
-
+      # 3. Clean previous builds
       - name: Clean old build files
         run: rm -rf src-tauri/target/release/bundle || true
 
+      # 4. Build Docker image WITH CACHE
       - name: Build Docker image (cached)
         run: |
           cd ~/tauri-docker-build
+
           docker build \
             --cache-from=type=local,src=/home/ubuntu/docker-cache \
             --cache-to=type=local,dest=/home/ubuntu/docker-cache,mode=max \
             -t tauri-builder:bookworm .
 
+      # 5. Build Tauri App inside Docker (FULL permission repair inside container)
       - name: Build Tauri App
         run: |
           cd $GITHUB_WORKSPACE
@@ -47,23 +45,40 @@ jobs:
             -w /app \
             tauri-builder:bookworm \
             bash -c "
+              echo '>>> Fixing ALL permissions inside Docker...'
+
+              # Fix all file and folder permissions under /app
+              find /app -type d -exec chmod 755 {} \; &&
+              find /app -type f -exec chmod 644 {} \; &&
+              chown -R $(id -u):$(id -g) /app &&
+
+              echo '>>> Setting up npm cache...'
               mkdir -p /app/.npm &&
               echo 'cache=/app/.npm' > /app/.npmrc &&
+
+              echo '>>> Installing npm dependencies...'
               npm install &&
+
+              echo '>>> Running cargo metadata check...'
+              cargo metadata --no-deps --format-version 1 &&
+
+              echo '>>> Building Tauri App...'
               npm run tauri build
             "
 
+      # 6. Upload final .deb file to S3
       - name: Upload to S3
         run: |
           FILE=$(ls src-tauri/target/release/bundle/deb/*.deb)
-          aws s3 cp \"$FILE\" s3://apm-update/builds/
-          echo \"BUILD_FILE=$(basename $FILE)\" >> $GITHUB_ENV
+          aws s3 cp "$FILE" s3://apm-update/builds/
+          echo "BUILD_FILE=$(basename $FILE)" >> $GITHUB_ENV
 
+      # 7. Send SES Email notification
       - name: Send SES Email
         run: |
-          LINK=\"https://apm-update.s3.amazonaws.com/builds/$BUILD_FILE\"
+          LINK="https://apm-update.s3.amazonaws.com/builds/$BUILD_FILE"
 
           aws ses send-email \
-            --from \"ankur.auti@inditronics.com\" \
-            --destination \"ToAddresses=ankurauti@gmail.com\" \
-            --message \"Subject={Data=Tauri Build Completed},Body={Text={Data=New ARM64 build is ready:\n$LINK}}"
+            --from "ankur.auti@inditronics.com" \
+            --destination "ToAddresses=ankurauti@gmail.com" \
+            --message "Subject={Data=Tauri Build Completed},Body={Text={Data=New ARM64 build is ready:\n$LINK}}"
