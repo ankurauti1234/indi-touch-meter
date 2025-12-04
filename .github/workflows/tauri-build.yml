@@ -22,37 +22,47 @@ jobs:
       - name: Clean old build files
         run: rm -rf src-tauri/target/release/bundle || true
 
-      # 4. Build Docker image & Tauri project
-      - name: Build using Docker
+      # 4. Build Docker image using CACHE
+      - name: Build Docker image (cached)
         run: |
-          # Build Docker image with Tauri toolchain
           cd ~/tauri-docker-build
-          docker build -t tauri-builder:bookworm .
 
-          # Go back to project folder
+          docker build \
+            --cache-from=type=local,src=/home/ubuntu/docker-cache \
+            --cache-to=type=local,dest=/home/ubuntu/docker-cache,mode=max \
+            -t tauri-builder:bookworm .
+
+      # 5. Build Tauri inside Docker (non-root, correct HOME)
+      - name: Build Tauri App
+        run: |
           cd $GITHUB_WORKSPACE
 
-          # Run Tauri build INSIDE docker, but as ubuntu user
           docker run --rm \
             -u "$(id -u):$(id -g)" \
+            -e HOME=/app \
             -v "$(pwd)":/app \
             -w /app \
             tauri-builder:bookworm \
-            bash -c "npm install && npm run tauri build"
+            bash -c "
+              mkdir -p /app/.npm &&
+              npm config set cache /app/.npm --global &&
+              npm install &&
+              npm run tauri build
+            "
 
-      # 5. Upload final .deb file to S3
+      # 6. Upload .deb file to S3
       - name: Upload to S3
         run: |
           FILE=$(ls src-tauri/target/release/bundle/deb/*.deb)
-          aws s3 cp "$FILE" s3://apm-update/builds/
-          echo "BUILD_FILE=$(basename $FILE)" >> $GITHUB_ENV
+          aws s3 cp \"$FILE\" s3://apm-update/builds/
+          echo \"BUILD_FILE=$(basename $FILE)\" >> $GITHUB_ENV
 
-      # 6. Email notification using SES
+      # 7. Send SES Email notification
       - name: Send SES Email
         run: |
-          LINK="https://apm-update.s3.amazonaws.com/builds/$BUILD_FILE"
+          LINK=\"https://apm-update.s3.amazonaws.com/builds/$BUILD_FILE\"
 
           aws ses send-email \
-            --from "ankur.auti@inditronics.com" \
-            --destination "ToAddresses=ankurauti@gmail.com" \
-            --message "Subject={Data=Tauri Build Completed},Body={Text={Data=New ARM64 build is ready: $LINK}}"
+            --from \"ankur.auti@inditronics.com\" \
+            --destination \"ToAddresses=ankurauti@gmail.com\" \
+            --message \"Subject={Data=Tauri Build Completed},Body={Text={Data=New ARM64 build is ready:\n$LINK}}\"        
