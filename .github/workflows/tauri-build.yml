@@ -10,7 +10,7 @@ jobs:
     runs-on: self-hosted   # EC2 ARM64 GitHub Runner
 
     steps:
-      # 1. Fix workspace (runner) directory permissions
+      # 1. Fix workspace directory permissions
       - name: Fix workspace permissions
         run: sudo chown -R ubuntu:ubuntu /home/ubuntu/actions-runner/_work
 
@@ -22,7 +22,7 @@ jobs:
       - name: Clean old build files
         run: rm -rf src-tauri/target/release/bundle || true
 
-      # 4. Build Docker image WITH CACHE
+      # 4. Build Docker image using CACHE
       - name: Build Docker image (cached)
         run: |
           cd ~/tauri-docker-build
@@ -32,7 +32,7 @@ jobs:
             --cache-to=type=local,dest=/home/ubuntu/docker-cache,mode=max \
             -t tauri-builder:bookworm .
 
-      # 5. Build Tauri App inside Docker (FULL permission repair inside container)
+      # 5. Build Tauri App inside Docker
       - name: Build Tauri App
         run: |
           cd $GITHUB_WORKSPACE
@@ -45,28 +45,25 @@ jobs:
             -w /app \
             tauri-builder:bookworm \
             bash -c "
-              echo '>>> Fixing ALL permissions inside Docker...'
-
-              # Fix all file and folder permissions under /app
+              echo '--- Fixing permissions ---'
               find /app -type d -exec chmod 755 {} \; &&
               find /app -type f -exec chmod 644 {} \; &&
               chown -R $(id -u):$(id -g) /app &&
 
-              echo '>>> Setting up npm cache...'
               mkdir -p /app/.npm &&
               echo 'cache=/app/.npm' > /app/.npmrc &&
 
-              echo '>>> Installing npm dependencies...'
+              echo '--- npm install ---'
               npm install &&
 
-              echo '>>> Running cargo metadata check...'
+              echo '--- cargo metadata ---'
               cargo metadata --no-deps --format-version 1 &&
 
-              echo '>>> Building Tauri App...'
+              echo '--- Building Tauri ---'
               npm run tauri build
             "
 
-      # 6. Upload final .deb file to S3
+      # 6. Upload .deb file to S3
       - name: Upload to S3
         run: |
           FILE=$(ls src-tauri/target/release/bundle/deb/*.deb)
